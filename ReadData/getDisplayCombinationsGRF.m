@@ -1,9 +1,15 @@
 % This program generates the parameterCombinations variable from the
 % stimResults
-function parameterCombinations = getDisplayCombinationsGRF(folderOut,goodStimNums)
+function parameterCombinations = getDisplayCombinationsGRF(folderOut,LLFlag)
 
-load(fullfile(folderOut,'stimResults.mat'));
-
+folderOut = appendIfNotPresent(folderOut,'\');
+if LLFlag
+    load(fullfile(folderOut,'stimResultsLL.mat'));
+    load(fullfile(folderOut,'goodStimNumsLL.mat'));
+else
+    load(fullfile(folderOut,'stimResults.mat'));
+    load(fullfile(folderOut,'goodStimNums.mat'));
+end
 % Five parameters are chosen:
 % 1. Azimuth
 % 2. Elevation
@@ -140,8 +146,12 @@ if ~isempty(aValsAll)
     end
 
     % save
-    save(fullfile(folderOut,'parameterCombinations.mat'),'parameters','parameterCombinations', ...
-        'aValsUnique','eValsUnique','sValsUnique','fValsUnique','oValsUnique','cValsUnique','tValsUnique');
-
+    if LLFlag
+        save(fullfile(folderOut,'parameterCombinationsLL.mat'),'parameters','parameterCombinations', ...
+            'aValsUnique','eValsUnique','sValsUnique','fValsUnique','oValsUnique','cValsUnique','tValsUnique');
+    else
+        save(fullfile(folderOut,'parameterCombinations.mat'),'parameters','parameterCombinations', ...
+            'aValsUnique','eValsUnique','sValsUnique','fValsUnique','oValsUnique','cValsUnique','tValsUnique');
+    end
 end
 end

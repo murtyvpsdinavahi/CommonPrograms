@@ -21,10 +21,14 @@
 % but not input/auxilliary channels. The code is modified to allow reading
 % both. "analogChannel" now is sepatared into either an "electrode" or an
 % "analogInput".
+
+% Modified by Murty V P S Dinavahi (MD) to extract Electrode positions and Sampling Frequencies for use in
+% EEG
+% Average referencing: added by MD 18/10/2014
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function getLFPandSpikesBlackrock(subjectName,expDate,protocolName,folderSourceString,gridType,analogElectrodesToStore,neuralChannelsToStore,...
-    goodStimTimes,timeStartFromBaseLine,deltaT,Fs,hFile,getLFP,getSpikes)
+function [electrodeNums,elecSampleRate,AinpSampleRate] = getLFPandSpikesBlackrock(dataLog,folderSourceString,analogElectrodesToStore,neuralChannelsToStore,...
+    timeStartFromBaseLine,deltaT,Fs,hFile,getLFP,getSpikes,LLFlag)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Initialize %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if ~exist('hFile','var');        hFile = [];                            end
@@ -32,12 +36,24 @@ if ~exist('getLFP','var');       getLFP=1;                              end
 if ~exist('getSpikes','var');    getSpikes=1;                           end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+[~,folderName]=getFolderDetails(dataLog);
+
+subjectName=dataLog{1,2};
+expDate=dataLog{3,2};
+protocolName=dataLog{4,2};
+gridType=dataLog{2,2};
+
 fileName = [subjectName expDate protocolName '.nev'];
-folderName = fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName);
 makeDirectory(folderName);
 folderIn = fullfile(folderSourceString,'data','rawData',[subjectName expDate]);
 folderExtract = fullfile(folderName,'extractedData');
 makeDirectory(folderExtract);
+
+load(fullfile(folderExtract,'goodStimNums.mat'));
+
+% added by MD
+elecSampleRate = 0;
+AinpSampleRate = 0;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -46,8 +62,7 @@ fileName = appendIfNotPresent(fileName,'.nev');
 
 if isempty(hFile)
     % Load the appropriate DLL
-    dllName = fullfile(removeIfPresent(fileparts(mfilename('fullpath')), ...
-        fullfile('ProgramsMAP','CommonPrograms','ReadData')),'SoftwareMAP','NeuroShare','nsNEVLibrary64.dll');
+    dllName = 'C:\Users\LabComputer6\Documents\MATLAB\Programs\SRAYLab Programs\SoftwareMAP (Only required ones)\NeuroShare\nsNEVLibrary64.dll';
     [nsresult] = ns_SetLibrary(dllName);
     if (nsresult ~= 0)
         error('DLL was not found!');
@@ -103,6 +118,7 @@ neuralLabels = char(entityInfo(neuralList).EntityLabel);
 
 %%%%%%% Separate AnalogChannels into Electrode and AnalogInput data %%%%%%%
 electrodeCount = 0;
+electrodeNums = []; % added by MD 28-10-14 for no electrode condition
 ainpCount = 0;
 
 for i=1:cAnalog
@@ -148,6 +164,9 @@ if getLFP && (cAnalog>0)
             disp('Analog electrode list not given, taking all available electrodes.');
             electrodeListIDsStored = electrodeListIDs;
             electrodesStored = electrodeNums;
+        elseif strcmp(analogElectrodesToStore,'ainp') % Added by MD 19-04-2015
+            disp('Taking all available analog inputs...');
+            electrodeCount = 0;
         else
             disp(['LFP from the specified ' num2str(length(analogElectrodesToStore)) ' electrodes and ' num2str(ainpCount) ' Ainp channels will be stored.']);
 
@@ -187,8 +206,11 @@ if getLFP && (cAnalog>0)
     %%%%%%%%%%%%%%%%%%%%%%% Get data from electrodes %%%%%%%%%%%%%%%%%%%%%%
     if electrodeCount ~= 0
         if cElectrodeListIDsStored > 0
+            sumData = zeros(totalStim,numSamples); % For average referencing: added by MD 18/10/2014
+            hWbElec = waitbar(0,['Getting data from elec' num2str(electrodesStored(1))]); % Added by MD 18-04-2015
             for i=1:cElectrodeListIDsStored
-                disp(['elec' num2str(electrodesStored(i))]);
+                waitbar(i/cElectrodeListIDsStored,hWbElec,['Getting data from elec' num2str(electrodesStored(1))])
+%                 disp(['elec' num2str(electrodesStored(i))]);
 
                 clear analogInfo
                 [~, analogInfo] = ns_GetAnalogInfo(hFile, electrodeListIDsStored(i)); %#ok<NASGU>
@@ -198,15 +220,23 @@ if getLFP && (cAnalog>0)
                 for j=1:totalStim
                     [~, ~, analogData(j,:)] = ns_GetAnalogData(hFile, ...
                         electrodeListIDsStored(i), goodStimPos(j)+1, numSamples);
+%                     disp(['stim no. ' num2str(j)]);
                 end
-                save(fullfile(outputFolder,['elec' num2str(electrodesStored(i)) '.mat']),'analogData','analogInfo');
+                sumData = sumData + analogData; % For average referencing: added by MD 18/10/2014
+                save([outputFolder '\elec' num2str(electrodesStored(i))],'analogData','analogInfo');
             end
+            averageData = sumData/cElectrodeListIDsStored; % For average referencing: added by MD 18/10/2014
+            save([outputFolder '\lfpAverage.mat'],'averageData'); % For average referencing: added by MD 18/10/2014
+            elecSampleRate = analogInfo.SampleRate;
+            close(hWbElec);
         end
     end
     %%%%%%%%%%%%%%%%%%%%%%% Get analog input data %%%%%%%%%%%%%%%%%%%%%%%%%
     if ainpCount>0
+        hWbAinp = waitbar(0,['Getting data from ainp' num2str(analogInputNums(1))]); % Added by MD 18-04-2015
         for i=1:ainpCount
-            disp(['ainp' num2str(analogInputNums(i))]);
+            waitbar(i/ainpCount,hWbAinp,['Getting data from ainp' num2str(analogInputNums(i))])
+%             disp(['ainp' num2str(analogInputNums(i))]);
             
             clear analogInfo
             [~, analogInfo] = ns_GetAnalogInfo(hFile, analogInputListIDs(i)); %#ok<NASGU>
@@ -216,9 +246,19 @@ if getLFP && (cAnalog>0)
             for j=1:totalStim
                 [~, ~, analogData(j,:)] = ns_GetAnalogData(hFile, ...
                     analogInputListIDs(i), goodStimPos(j)+1, numSamples);
+%                 disp(['stim no. ' num2str(j)]);
             end
-            save(fullfile(outputFolder,['ainp' num2str(analogInputNums(i)) '.mat']),'analogData','analogInfo');
+            if strcmp(analogElectrodesToStore,'ainp') % Added by MD 19-04-2015
+                save([outputFolder '\unallignedAinp' num2str(analogInputNums(i))],'analogData','analogInfo');
+            else
+                save([outputFolder '\ainp' num2str(analogInputNums(i))],'analogData','analogInfo');
+            end
         end
+        AinpSampleRate = analogInfo.SampleRate;
+        close(hWbAinp);
+    else
+        disp ('No Ainp channels found');
+        analogInputNums = 0;
     end
 
     % Write LFP information. For backward compatibility, we also save
@@ -366,6 +406,8 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Close file
-ns_CloseFile(hFile);
-clear mexprog;
+if ~strcmp(analogElectrodesToStore,'ainp') % Added by MD 19-04-2015
+    ns_CloseFile(hFile);
+    clear mexprog;
+end
 end

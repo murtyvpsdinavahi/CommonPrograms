@@ -9,34 +9,40 @@ function codeExistsFlag = digitalCodeDictionary(str)
 if ~exist('str','var');                     str='';                     end
 
 codeList = [...
-    'AL';
-    'AZ';
-    'BR'; 
-    'CO';
-    'CT';
-    'EC';
-    'EL';
-    'FI';
-    'FO'; 
-    'IT'; 
-    'M0'; 
-    'M1'; 
-    'ON'; 
-    'OF'; 
-    'OR'; 
-    'PA'; 
-    'RA'; 
-    'SA'; 
-    'SF'; 
-    'SI'; 
-    'ST'; 
-    'TC'; 
-    'TE'; 
-    'TF'; 
-    'TG'; 
-    'TS'; 
-    'T0'; 
-    'T1'; 
+    'AA'; % Auditory Azimuth
+    'AD'; % Auditory Stimulus
+    'AL'; % Attend Loc
+    'AO'; % Auditory Orientation
+    'AS'; % Auditory SF
+    'AT'; % Audio TF
+    'AV'; % Audio Volume
+    'AZ'; % Azimuth
+    'BR'; % Break
+    'CO'; % Contrast
+    'CT'; % Catch Trial
+    'EC'; % Eccentricity
+    'EL'; % Elevation
+    'FI'; % Fixate
+    'FO'; % Fix On
+    'IT'; % Instruct Trial
+    'M0'; % Mapping 0
+    'M1'; % Mapping 1
+    'ON'; % Stimulus On
+    'OF'; % Stimulus Off
+    'OR'; % Orientation
+    'PA'; % Polar Angle
+    'RA'; % Radius
+    'SA'; % Saccade
+    'SF'; % Spatia Frequency
+    'SI'; % Sigma
+    'ST'; % Stim Type
+    'TC'; % Trial Certify
+    'TE'; % Trial End
+    'TF'; % Temporal Frequency
+    'TG'; % Task Gabor
+    'TS'; % Trial Start
+    'T0'; % Type 0
+    'T1'; % Type 1
 ];
 
 if isempty(str)

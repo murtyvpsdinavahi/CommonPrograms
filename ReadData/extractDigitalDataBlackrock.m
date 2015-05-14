@@ -1,16 +1,19 @@
 % This function is used to extract the digital data from raw .nev data files
 
-% Each data file is characterized by four parameters - subjectName, expDate,
-% protocolName and gridType.
-
-% We assume that the raw data is initially stored in
-% folderSourceString\data\rawData\{subjectName}{expDate}\
 
 function [hFile,digitalTimeStamps,digitalEvents]=extractDigitalDataBlackrock(subjectName,expDate,protocolName,folderSourceString,gridType)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fileName = [subjectName expDate protocolName '.nev'];
-folderName = fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName);
+
+dataLog{1,2} = subjectName;
+dataLog{2,2} = gridType;
+dataLog{3,2} = expDate;
+dataLog{4,2} = protocolName;
+
+[~,folderName]=getFolderDetails(dataLog);
+
+% folderName = fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName);
 makeDirectory(folderName);
 folderIn = fullfile(folderSourceString,'data','rawData',[subjectName expDate]);
 folderExtract = fullfile(folderName,'extractedData');
@@ -19,8 +22,7 @@ makeDirectory(folderExtract);
 % Read the NEV file
 
 % Load the appropriate DLL
-dllName = fullfile(removeIfPresent(fileparts(mfilename('fullpath')), ...
-fullfile('ProgramsMAP','CommonPrograms','ReadData')),'SoftwareMAP','NeuroShare','nsNEVLibrary64.dll');
+dllName = 'C:\Users\LabComputer6\Documents\MATLAB\Programs\SRAYLab Programs\SoftwareMAP (Only required ones)\NeuroShare\nsNEVLibrary64.dll';
 
 [nsresult] = ns_SetLibrary(dllName);
 if (nsresult ~= 0);      error('DLL was not found!');                   end
@@ -73,5 +75,5 @@ if ~isempty(badDTPos)
     digitalEvents(badDTPos)=[];
 end
 
-save(fullfile(folderExtract,'NEVFileInfo.mat'), 'fileInfo', 'entityInfo');
+save(fullfile(folderExtract,'\NEVFileInfo.mat'), 'fileInfo', 'entityInfo');
 end

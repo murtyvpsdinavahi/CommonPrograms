@@ -24,14 +24,17 @@ if ~exist(datFileName,'file')
 else
     disp('Working on Lablib data file ...');
     LLFileExistsFlag = 1;
-    folderName    = fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName);
-    folderExtract = fullfile(folderName,'extractedData');
-    makeDirectory(folderExtract);
+%     folderName    = fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName);
+%     folderExtract = fullfile(folderName,'extractedData');
+%     makeDirectory(folderExtract);
     
     if strncmpi(protocolName,'SRC',3) % SRC
         [LL,targetInfo,psyInfo,reactInfo] = getStimResultsLLSRC(subjectName,expDate,protocolName,folderSourceString); %#ok<*ASGLU,*NASGU>
         save(fullfile(folderExtract,'LL.mat'),'LL','targetInfo','psyInfo','reactInfo');
-    else
+    elseif strncmpi(protocolName,'GAV',3) % GAV (Added by MD 16-03-2015)
+        LL = getStimResultsLLGAV(subjectName,gridType,expDate,protocolName,folderSourceString);
+%         save(fullfile(folderExtract,'LL.mat'),'LL');
+    else 
         LL = getStimResultsLLGRF(subjectName,expDate,protocolName,folderSourceString);
         save(fullfile(folderExtract,'LL.mat'),'LL');
     end

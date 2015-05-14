@@ -26,8 +26,15 @@
 function [digitalTimeStamps,digitalEvents]=extractDigitalDataBrainProducts(subjectName,expDate,protocolName,folderSourceString,gridType)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+dataLog{1,2} = subjectName;
+dataLog{2,2} = gridType;
+dataLog{3,2} = expDate;
+dataLog{4,2} = protocolName;
+
+[~,folderName]=getFolderDetails(dataLog);
+
 fileName = [subjectName expDate protocolName '.vhdr'];
-folderName = fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName);
+% folderName = fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName);
 makeDirectory(folderName);
 folderIn = fullfile(folderSourceString,'data','rawData',[subjectName expDate]);
 folderExtract = fullfile(folderName,'extractedData');
