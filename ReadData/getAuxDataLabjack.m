@@ -14,14 +14,21 @@
 % We assume that the sensor data is being recorded along with the
 % BrainProducts EEG data. 
 
-function getAuxDataLabjack(subjectName,expDate,protocolName,folderSourceString,gridType,goodStimTimes,timeStartFromBaseLine,deltaT,electrodesToStore)
+function getAuxDataLabjack(subjectName,expDate,protocolName,folderSourceString,gridType,goodStimTimes,timeStartFromBaseLine,deltaT,electrodesToStore,reallignFlag)
 
 if ~exist('folderSourceString','var');    folderSourceString ='F:';      end
 if ~exist('timeStartFromBaseLine','var'); timeStartFromBaseLine= -0.55;  end
 if ~exist('deltaT','var');                deltaT = 1.024;                end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-folderName = fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName);
+dataLog{1,2} = subjectName;
+dataLog{2,2} = gridType;
+dataLog{3,2} = expDate;
+dataLog{4,2} = protocolName;
+dataLog{14,2} = folderSourceString;
+
+[~,folderName]=getFolderDetails(dataLog);
+
 makeDirectory(folderName);
 folderExtract = fullfile(folderName,'extractedData');
 folderSegment = fullfile(folderName,'segmentedData');
@@ -48,7 +55,7 @@ endVals  = trialResults(pos).value;
 rewardTimesDigital = endTimes(endVals==0);
 
 rewardChannel=1; cutOff = -0.5;
-d = diff(data{rewardChannel});
+d = diff(mod(data{rewardChannel},2));
 rewardTimesLabjack = t(d<cutOff);
 
 diffTimes = rewardTimesLabjack(:) - rewardTimesDigital(:);
@@ -58,7 +65,7 @@ disp(['Labjack data stream ahead by mean: ' num2str(offset) ', min: ' num2str(mi
 
 goodStimTimesLabjack = goodStimTimes + offset;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Save LFP Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-saveAnalogData(data,t,electrodesToStore,folderSegment,goodStimTimesLabjack,timeStartFromBaseLine,deltaT);
+saveAnalogData(data,t,electrodesToStore,folderSegment,goodStimTimesLabjack,timeStartFromBaseLine,deltaT,reallignFlag);
 end
 
 % Read Data from Labjack
@@ -118,7 +125,7 @@ end
 
 fclose(fid);
 end
-function saveAnalogData(data,t,analogChannelsStored,folderSegment,goodStimTimes,timeStartFromBaseLine,deltaT)
+function saveAnalogData(data,t,analogChannelsStored,folderSegment,goodStimTimes,timeStartFromBaseLine,deltaT,reallignFlag)
 
 Fs = round(1./(t(2)-t(1)));
 
@@ -143,10 +150,23 @@ for i=1:length(analogChannelsStored)
         pos = find(t<=analysisOnsetTimes(j), 1, 'last' );
         analogData(j,:) = dataThisChannel(pos+1:pos+numSamples);
     end
-    save(fullfile(outputFolder,['aux' num2str(analogChannelsStored(i))]),'analogData');
+    if reallignFlag % Added by MD 19-04-2015
+        save(fullfile(outputFolder,['unallignedAinp' num2str(analogChannelsStored(i))]),'analogData');
+    else
+        save(fullfile(outputFolder,['ainp' num2str(analogChannelsStored(i))]),'analogData');
+    end
+    
 end
 
+analogInputNum = analogChannelsStored;
 % Write LFP information
-save(fullfile(outputFolder,'auxlfpInfo.mat'),'analogChannelsStored','timeVals');
+if exist(fullfile(outputFolder,'lfpInfo.mat'),'file')    
+    clear analogChannelsStored timeVals;
+    load(fullfile(outputFolder,'lfpInfo.mat'));
+    analogInputNums = analogInputNum;
+    save(fullfile(outputFolder,'lfpInfo.mat'),'analogChannelsStored','electrodesStored','analogInputNums','goodStimPos','timeVals');
+else
+    save(fullfile(outputFolder,'lfpInfo.mat'),'analogChannelsStored','timeVals');
+end
 
 end

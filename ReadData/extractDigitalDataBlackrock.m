@@ -10,6 +10,7 @@ dataLog{1,2} = subjectName;
 dataLog{2,2} = gridType;
 dataLog{3,2} = expDate;
 dataLog{4,2} = protocolName;
+dataLog{14,2} = folderSourceString;
 
 [~,folderName]=getFolderDetails(dataLog);
 
@@ -22,7 +23,8 @@ makeDirectory(folderExtract);
 % Read the NEV file
 
 % Load the appropriate DLL
-dllName = 'C:\Users\LabComputer6\Documents\MATLAB\Programs\SRAYLab Programs\SoftwareMAP (Only required ones)\NeuroShare\nsNEVLibrary64.dll';
+% dllName = 'C:\Users\LabComputer6\Documents\MATLAB\Programs\SRAYLab Programs\SoftwareMAP (Only required ones)\NeuroShare\nsNEVLibrary64.dll';
+dllName = fullfile(pwd,'NeuroShare','nsNEVLibrary64.dll');
 
 [nsresult] = ns_SetLibrary(dllName);
 if (nsresult ~= 0);      error('DLL was not found!');                   end
@@ -75,5 +77,5 @@ if ~isempty(badDTPos)
     digitalEvents(badDTPos)=[];
 end
 
-save(fullfile(folderExtract,'\NEVFileInfo.mat'), 'fileInfo', 'entityInfo');
+save(fullfile(folderExtract,'NEVFileInfo.mat'), 'fileInfo', 'entityInfo');
 end

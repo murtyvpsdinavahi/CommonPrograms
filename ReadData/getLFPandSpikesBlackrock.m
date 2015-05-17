@@ -33,7 +33,7 @@ function [electrodeNums,elecSampleRate,AinpSampleRate] = getLFPandSpikesBlackroc
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Initialize %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if ~exist('hFile','var');        hFile = [];                            end
 if ~exist('getLFP','var');       getLFP=1;                              end
-if ~exist('getSpikes','var');    getSpikes=1;                           end
+if ~exist('getSpikes','var');    getSpikes=0;                           end % Default changed to 0 by MD 30-11-2015
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [~,folderName]=getFolderDetails(dataLog);
@@ -61,11 +61,12 @@ AinpSampleRate = 0;
 fileName = appendIfNotPresent(fileName,'.nev');
 
 if isempty(hFile)
-    % Load the appropriate DLL
-    dllName = 'C:\Users\LabComputer6\Documents\MATLAB\Programs\SRAYLab Programs\SoftwareMAP (Only required ones)\NeuroShare\nsNEVLibrary64.dll';
+    % Load the appropriate DLL from pwd (MD 30-11-2015)
+    dllName = fullfile(pwd,'NeuroShare','nsNEVLibrary64.dll');
+%     dllName = 'C:\Users\LabComputer6\Documents\MATLAB\NeuroShare\nsNEVLibrary64.dll';
     [nsresult] = ns_SetLibrary(dllName);
     if (nsresult ~= 0)
-        error('DLL was not found!');
+        error('DLL was not found! Please add NeuroShare folder to the present working directory.');
     end
 end
 
@@ -80,7 +81,7 @@ if ~isempty(hFile)
     end
 else
     disp('Getting file info...')
-    [nsresult, hFile] = ns_OpenFile([folderIn fileName]);
+    [nsresult, hFile] = ns_OpenFile(fullfile(folderIn,fileName));
     if (nsresult ~= 0)
         error('Data file did not open!');
     else
@@ -209,9 +210,7 @@ if getLFP && (cAnalog>0)
             sumData = zeros(totalStim,numSamples); % For average referencing: added by MD 18/10/2014
             hWbElec = waitbar(0,['Getting data from elec' num2str(electrodesStored(1))]); % Added by MD 18-04-2015
             for i=1:cElectrodeListIDsStored
-                waitbar(i/cElectrodeListIDsStored,hWbElec,['Getting data from elec' num2str(electrodesStored(1))])
-%                 disp(['elec' num2str(electrodesStored(i))]);
-
+                waitbar((i-1)/cElectrodeListIDsStored,hWbElec,['Getting data from elec' num2str(electrodesStored(i))]);
                 clear analogInfo
                 [~, analogInfo] = ns_GetAnalogInfo(hFile, electrodeListIDsStored(i)); %#ok<NASGU>
 
@@ -223,10 +222,10 @@ if getLFP && (cAnalog>0)
 %                     disp(['stim no. ' num2str(j)]);
                 end
                 sumData = sumData + analogData; % For average referencing: added by MD 18/10/2014
-                save([outputFolder '\elec' num2str(electrodesStored(i))],'analogData','analogInfo');
+                save(fullfile(outputFolder,['elec' num2str(electrodesStored(i))]),'analogData','analogInfo');
             end
             averageData = sumData/cElectrodeListIDsStored; % For average referencing: added by MD 18/10/2014
-            save([outputFolder '\lfpAverage.mat'],'averageData'); % For average referencing: added by MD 18/10/2014
+            save(fullfile(outputFolder,'lfpAverage.mat'),'averageData'); % For average referencing: added by MD 18/10/2014
             elecSampleRate = analogInfo.SampleRate;
             close(hWbElec);
         end
@@ -235,7 +234,7 @@ if getLFP && (cAnalog>0)
     if ainpCount>0
         hWbAinp = waitbar(0,['Getting data from ainp' num2str(analogInputNums(1))]); % Added by MD 18-04-2015
         for i=1:ainpCount
-            waitbar(i/ainpCount,hWbAinp,['Getting data from ainp' num2str(analogInputNums(i))])
+            waitbar((i-1)/ainpCount,hWbAinp,['Getting data from ainp' num2str(analogInputNums(i))])
 %             disp(['ainp' num2str(analogInputNums(i))]);
             
             clear analogInfo
@@ -249,9 +248,9 @@ if getLFP && (cAnalog>0)
 %                 disp(['stim no. ' num2str(j)]);
             end
             if strcmp(analogElectrodesToStore,'ainp') % Added by MD 19-04-2015
-                save([outputFolder '\unallignedAinp' num2str(analogInputNums(i))],'analogData','analogInfo');
+                save(fullfile(outputFolder,['unallignedAinp' num2str(analogInputNums(i))]),'analogData','analogInfo');
             else
-                save([outputFolder '\ainp' num2str(analogInputNums(i))],'analogData','analogInfo');
+                save(fullfile(outputFolder,['ainp' num2str(analogInputNums(i))]),'analogData','analogInfo');
             end
         end
         AinpSampleRate = analogInfo.SampleRate;

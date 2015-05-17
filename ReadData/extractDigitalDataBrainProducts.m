@@ -30,6 +30,7 @@ dataLog{1,2} = subjectName;
 dataLog{2,2} = gridType;
 dataLog{3,2} = expDate;
 dataLog{4,2} = protocolName;
+dataLog{14,2} = folderSourceString;
 
 [~,folderName]=getFolderDetails(dataLog);
 

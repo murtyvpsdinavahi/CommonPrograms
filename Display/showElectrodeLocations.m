@@ -1,4 +1,4 @@
-function plotHandle = showElectrodeLocations(gridPosition,highlightElectrodes,colorNames,plotHandle,holdOnState,hideElectrodeNums,gridType,subjectName)
+function plotHandle = showElectrodeLocations(gridPosition,highlightElectrodes,colorNames,plotHandle,holdOnState,hideElectrodeNums,gridType,subjectName,gridLayout)
 
 if ~exist('subjectName','var');          subjectName=[];                end
 if ~exist('hideElectrodeNums','var');    hideElectrodeNums=0;           end
@@ -7,7 +7,7 @@ if ~exist('gridType','var');             gridType = 'Microelectrode';   end
 if strcmpi(gridType,'ECoG')
     numRows=8;numCols=10;
 else 
-    numRows=10;numCols=10;
+    numRows=10;numCols=11;
 end
 
 if ~exist('plotHandle','var') || isempty(plotHandle)
@@ -40,7 +40,7 @@ if ~isempty(highlightElectrodes)
     for i=1:length(highlightElectrodes)
         highlightElectrode=highlightElectrodes(i);
         
-        [highlightRow,highlightCol,electrodeArray] = electrodePositionOnGrid(highlightElectrode,gridType,subjectName);
+        [highlightRow,highlightCol,electrodeArray] = electrodePositionOnGrid(highlightElectrode,gridType,subjectName,gridLayout);
 
         % Create patch
         patchX = (highlightCol-1)*dX;
@@ -55,7 +55,7 @@ if ~isempty(highlightElectrodes)
         end
     end
 else
-    [~,~,electrodeArray] = electrodePositionOnGrid(1,gridType);
+    [~,~,electrodeArray] = electrodePositionOnGrid(1,gridType,subjectName,gridLayout);
 end
 
 % Write electrode numbers
