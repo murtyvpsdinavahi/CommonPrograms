@@ -349,18 +349,18 @@ hMessage = uicontrol('Unit','Normalized','Position',[0 0.975 1 0.025],...
                 holdOnState = get(hHoldOn,'val');
                 channelsStored = neuralChannelsStored;
                 [baselineFiringRate,stimulusFiringRate] = plotSpikeData(plotHandles,channelsStored,goodPos,folderSpikes,...
-                    timeVals,plotColor,SourceUnitID,holdOnState,blRange,stRange,gridType);
+                    timeVals,plotColor,SourceUnitID,holdOnState,blRange,stRange,gridType,subjectName);
                 responsiveElectrodes = (channelsStored(stimulusFiringRate>=5));
                 inhibitedElectrodes = (channelsStored(intersect(find(baselineFiringRate>=5),find(stimulusFiringRate<=5))));
                 disp(['responsive: ' num2str(responsiveElectrodes)]);
                 disp(['inhibited : ' num2str(inhibitedElectrodes)]);
-                showElectrodeLocations(electrodeGridPos,responsiveElectrodes,'b',hElectrodes,1,0,gridType);
-                showElectrodeLocations(electrodeGridPos,inhibitedElectrodes,'g',hElectrodes,1,0,gridType);
+                showElectrodeLocations(electrodeGridPos,responsiveElectrodes,'b',hElectrodes,1,0,gridType,subjectName);
+                showElectrodeLocations(electrodeGridPos,inhibitedElectrodes,'g',hElectrodes,1,0,gridType,subjectName);
             
             else
                 channelsStored = analogChannelsStored;
                 plotLFPData(plotHandles,channelsStored,goodPos,folderLFP,...
-                analysisType,timeVals,plotColor,blRange,stRange,gridType);
+                analysisType,timeVals,plotColor,blRange,stRange,gridType,subjectName);
             end
             
             if analysisType<=2 % ERP or spikes
@@ -369,9 +369,9 @@ hMessage = uicontrol('Unit','Normalized','Position',[0 0.975 1 0.025],...
                 xRange = [str2double(get(hFFTMin,'String')) str2double(get(hFFTMax,'String'))];
             end
             
-            yRange = getYLims(plotHandles,channelsStored,gridType);
+            yRange = getYLims(plotHandles,channelsStored,gridType,subjectName);
             set(hYMin,'String',num2str(yRange(1))); set(hYMax,'String',num2str(yRange(2)));
-            rescaleData(plotHandles,channelsStored,[xRange yRange],gridType);
+            rescaleData(plotHandles,channelsStored,[xRange yRange],gridType,subjectName);
         end
     end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -392,7 +392,7 @@ hMessage = uicontrol('Unit','Normalized','Position',[0 0.975 1 0.025],...
         end
 
         yRange = [str2double(get(hYMin,'String')) str2double(get(hYMax,'String'))];
-        rescaleData(plotHandles,channelsStored,[xRange yRange],gridType);
+        rescaleData(plotHandles,channelsStored,[xRange yRange],gridType,subjectName);
 
     end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -412,8 +412,8 @@ hMessage = uicontrol('Unit','Normalized','Position',[0 0.975 1 0.025],...
             xRange = [str2double(get(hFFTMin,'String')) str2double(get(hFFTMax,'String'))];
         end
 
-        yRange = getYLims(plotHandles,channelsStored,gridType);
-        rescaleData(plotHandles,channelsStored,[xRange yRange],gridType);
+        yRange = getYLims(plotHandles,channelsStored,gridType,subjectName);
+        rescaleData(plotHandles,channelsStored,[xRange yRange],gridType,subjectName);
     end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     function holdOn_Callback(source,~)
@@ -451,7 +451,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Main function that plots the data
 function plotLFPData(plotHandles, channelsStored, goodPos, ...
-    folderData, analysisType, timeVals, plotColor,blRange,stRange,gridType)
+    folderData, analysisType, timeVals, plotColor,blRange,stRange,gridType,subjectName)
 
 if isempty(goodPos)
     disp('No entries for this combination..')
@@ -480,7 +480,7 @@ else
         disp(['Plotting electrode ' num2str(channelNum)]);
 
         % get position
-        [row,column] = electrodePositionOnGrid(channelNum,gridType);
+        [row,column] = electrodePositionOnGrid(channelNum,gridType,subjectName);
 
         if analysisType == 1        % compute ERP
             clear signal analogData
@@ -527,7 +527,7 @@ end
 end
 
 function [baselineFiringRate,stimulusFiringRate] = plotSpikeData(plotHandles,channelsStored,goodPos, ...
-    folderData, timeVals, plotColor, SourceUnitID,holdOnState,blRange,stRange,gridType)
+    folderData, timeVals, plotColor, SourceUnitID,holdOnState,blRange,stRange,gridType,subjectName)
 
 unitColors = ['r','m','y','c','g'];
 binWidthMS = 10;
@@ -544,11 +544,11 @@ else
         disp(channelNum)
 
         % get position
-        [row,column] = electrodePositionOnGrid(channelNum,gridType);
+        [row,column] = electrodePositionOnGrid(channelNum,gridType,subjectName);
 
         clear neuralInfo spikeData
-        load([folderData 'elec' num2str(channelNum) '_SID' num2str(SourceUnitID(i))]);
-        [psthVals,xs] = getPSTH(spikeData(goodPos),binWidthMS,timeVals);
+        load(fullfile(folderData,['elec' num2str(channelNum) '_SID' num2str(SourceUnitID(i))]));
+        [psthVals,xs] = getPSTH(spikeData(goodPos),binWidthMS,[timeVals(1) timeVals(end)]);
         
         % Compute the mean firing rates
         blPos = find(xs>=blRange(1),1)+ (1:(diff(blRange))/(binWidthMS/1000));
@@ -580,7 +580,7 @@ else
 end
 end   
 
-function yRange = getYLims(plotHandles,channelsStored,gridType)
+function yRange = getYLims(plotHandles,channelsStored,gridType,subjectName)
 
 % Initialize
 yMin = inf;
@@ -589,7 +589,7 @@ yMax = -inf;
 for i=1:length(channelsStored)
     channelNum = channelsStored(i);
     % get position
-    [row,column] = electrodePositionOnGrid(channelNum,gridType);
+    [row,column] = electrodePositionOnGrid(channelNum,gridType,subjectName);
     
     axis(plotHandles(row,column),'tight');
     tmpAxisVals = axis(plotHandles(row,column));
@@ -602,7 +602,7 @@ for i=1:length(channelsStored)
 end
 yRange = [yMin yMax];
 end
-function rescaleData(plotHandles,channelsStored,axisLims,gridType)
+function rescaleData(plotHandles,channelsStored,axisLims,gridType,subjectName)
 
 [numRows,numCols] = size(plotHandles);
 labelSize=12;
@@ -610,7 +610,7 @@ for i=1:length(channelsStored)
     channelNum = channelsStored(i);
     
     % get position
-   [row,column] = electrodePositionOnGrid(channelNum,gridType);
+   [row,column] = electrodePositionOnGrid(channelNum,gridType,subjectName);
     
     axis(plotHandles(row,column),axisLims);
     if (row==numRows && rem(column,2)==1)

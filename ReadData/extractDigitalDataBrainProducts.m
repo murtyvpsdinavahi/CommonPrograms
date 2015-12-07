@@ -23,7 +23,11 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [digitalTimeStamps,digitalEvents]=extractDigitalDataBrainProducts(subjectName,expDate,protocolName,folderSourceString,gridType)
+function [digitalTimeStamps,digitalEvents]=extractDigitalDataBrainProducts(subjectName,expDate,protocolName,folderSourceString,gridType,deltaLimitMS)
+
+% We only consider codes that are separated by at least deltaLimit ms to make sure
+% that none of the codes are during the transition period.
+if ~exist('deltaLimitMS','var');    deltaLimitMS = 3;                   end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 dataLog{1,2} = subjectName;
@@ -51,10 +55,6 @@ eegData = pop_loadbv(folderIn,fileName,[],1);
 
 [digitalTimeStampsS,digitalEventsS,digitalTimeStampsR,digitalEventsR] = getStimulusEvents(eegData.event);
 disp(['Digital events: Total: ' num2str(length(eegData.event)) ', Stimulus: ' num2str(length(digitalTimeStampsS)) ', Response: ' num2str(length(digitalTimeStampsR))]);
-
-% We only consider codes that are separated by at least deltaLimit ms to make sure
-% that none of the codes are during the transition period.
-deltaLimitMS = 3;
 
 if isempty(digitalTimeStampsR)
     [digitalTimeStamps,digitalEvents] = removeBadCodes(digitalTimeStampsS/eegData.srate,digitalEventsS,deltaLimitMS);

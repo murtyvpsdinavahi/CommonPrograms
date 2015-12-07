@@ -12,16 +12,20 @@
 % interval from the first.  
 
 % 3. More variables are now saved in rfValues .mat file such that RF
-% estimation can be done without needing additional information. 
+% estimation can be done without needing additional information.
 
-function getValuesForRFEstimation(subjectName,expDate,protocolName,folderSourceString,gridType,measure,timeRangeList,removeAvgRef,electrodeList,folderOutString)
+% 18/6/15: Now also saving the absolute of the min value. Also addnig an
+% option to put a filter
+
+function filterStr = getValuesForRFEstimation(subjectName,expDate,protocolName,folderSourceString,gridType,measure,timeRangeList,removeAvgRef,electrodeList,folderOutString,applyFilterFlag)
 
 if ~exist('timeRangeList','var');       timeRangeList=[];                   end
 if ~exist('removeAvgRef','var');        removeAvgRef=0;                     end
 if ~exist('electrodeList','var');       electrodeList=[];                   end
 if ~exist('folderOutString','var');     folderOutString=folderSourceString; end
+if ~exist('applyFilterFlag','var');     applyFilterFlag = 0;                end
 
-stimPosGreaterThanOne=1;
+stimPosGreaterThanOne=0; % 0 - all, 1 - all except the first stimulus in each trial, 2 - only the first stimulus of each trial
 
 if isempty(timeRangeList)
     timeRangeList{1}={[40 100]/1000};
@@ -62,6 +66,7 @@ load(fullfile(folderSegment,'badTrials.mat'));
 if strcmp(measure,'LFP')    % Case 1 - LFP analysis
     % Get Time Ranges
     load(fullfile(folderSegment,'LFP','lfpInfo.mat'));
+    Fs = round(1/(timeVals(2)-timeVals(1)));
     [timePos,timePosBL] = getTimePos(timeRangeList,timeVals);
     
     stimPos = getGoodPos(subjectName,expDate,protocolName,folderSourceString,gridType,stimPosGreaterThanOne);
@@ -76,8 +81,15 @@ if strcmp(measure,'LFP')    % Case 1 - LFP analysis
         % Get LFP data
         clear signal analogData meanLFPData numStimuli
         load(fullfile(folderSegment,'LFP',['elec' num2str(channelNumber) '.mat']));
+
         if removeAvgRef
             analogData = analogData-avgRef;
+        end
+        
+        if applyFilterFlag
+            [analogData,filterStr] = applyFilter(analogData,Fs);
+        else
+            filterStr='';
         end
         
         for a=1:aLength
@@ -91,7 +103,7 @@ if strcmp(measure,'LFP')    % Case 1 - LFP analysis
                     rfValsRMS(e,a,channelNumber,1:numTimePeriods)=0; %#ok<*AGROW>
                     rfValsMax(e,a,channelNumber,1:numTimePeriods)=0;
                     rfValsPower(e,a,channelNumber,1:numTimePeriods)=0;
-                    
+                    rfValsMin(e,a,channelNumber,1:numTimePeriods)=0;
                     numStimuli(e,a) = 0;
                 else
                     clear erp erpBL erpST
@@ -104,34 +116,39 @@ if strcmp(measure,'LFP')    % Case 1 - LFP analysis
                         erpSegment = erp(timePos{j});
                         rmsVal = rms(erpSegment);
                         maxVal = max(abs(erpSegment));
+                        minVal = abs(min(erpSegment));
                         
                         erpSegmentBL = erp(timePosBL{j});
                         if isempty(erpSegmentBL)
                             rmsValBL=0;
                             maxValBL=0;
+                            minValBL=0;
                         else
                             rmsValBL = rms(erpSegmentBL);
                             maxValBL = max(abs(erpSegmentBL));
+                            minValBL = abs(min(erpSegmentBL));
                         end
                         
                         rfValsRMS(e,a,channelNumber,j) = rmsVal - rmsValBL;
                         rfValsMax(e,a,channelNumber,j) = maxVal - maxValBL;
                         rfValsPower(e,a,channelNumber,j) = rmsVal.^2 - rmsValBL.^2;
+                        rfValsMin(e,a,channelNumber,j) = minVal - minValBL;
                     end
                 end
             end
         end
         
         % Save Mean LFP data
-        save(fullfile(folderOut,['meanLFPDataChan' num2str(channelNumber) fileTag '.mat']),'meanLFPData','timeVals','numStimuli','aValsUnique','eValsUnique');
+        save(fullfile(folderOut,['meanLFPDataChan' num2str(channelNumber) fileTag filterStr '.mat']),'meanLFPData','timeVals','numStimuli','aValsUnique','eValsUnique');
     end
     
     % Save - numStimuli should be the same for all channels
-    save(fullfile(folderOut,['rfValues' fileTag '.mat']),'rfValsRMS','rfValsMax','rfValsPower','numStimuli','timeRangeList','electrodeList','aValsUnique','eValsUnique');
+    save(fullfile(folderOut,['rfValues' fileTag filterStr '.mat']),'rfValsRMS','rfValsMax','rfValsPower','rfValsMin','numStimuli','timeRangeList','electrodeList','aValsUnique','eValsUnique');
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
 elseif strcmp(measure,'Spikes')    % Case 2 - spike analysis
     
+    filterStr = ''; % No filter
     load(fullfile(folderSegment,'LFP','lfpInfo.mat'));  % to get timeVals
     load(fullfile(folderSegment,'Spikes','spikeInfo.mat'));
     stimPos = getGoodPos(subjectName,expDate,protocolName,folderSourceString,gridType,stimPosGreaterThanOne);

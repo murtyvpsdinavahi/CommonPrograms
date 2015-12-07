@@ -3,13 +3,18 @@
 % 2. maxLimit
 % If yes, that trial is marked as a bad trial
 
-function [allBadTrials,badTrials] = findBadTrialsWithLFP(monkeyName,expDate,protocolName,folderSourceString,gridType,checkTheseElectrodes,threshold,maxLimit,showElectrodes,minLimit,saveDataFlag)
+% 15/06/15: Adding putFilterFlag. Data sometimes shows a low frequency
+% drift. We put a high-pass filter to remove this drift before applying the
+% thresholds
+
+function [allBadTrials,badTrials] = findBadTrialsWithLFP(monkeyName,expDate,protocolName,folderSourceString,gridType,checkTheseElectrodes,threshold,maxLimit,showElectrodes,minLimit,saveDataFlag,applyFilterFlag)
 
 if ~exist('checkTheseElectrodes','var');     checkTheseElectrodes = [33 12 80 63 44];   end
 if ~exist('folderSourceString','var');       folderSourceString = 'G:';                 end
 if ~exist('threshold','var');                threshold = 6;                             end
 if ~exist('minLimit','var');                 minLimit = -2000;                          end
 if ~exist('saveDataFlag','var');             saveDataFlag = 1;                          end
+if ~exist('applyFilterFlag','var');          applyFilterFlag = 0;                       end
 
 folderName = fullfile(folderSourceString,'data',monkeyName,gridType,expDate,protocolName);
 folderSegment = fullfile(folderName,'segmentedData');
@@ -21,6 +26,10 @@ allBadTrials = cell(1,numElectrodes);
 for i=1:numElectrodes
     electrodeNum=checkTheseElectrodes(i);
     load(fullfile(folderSegment,'LFP',['elec' num2str(electrodeNum) '.mat']));
+    
+    if applyFilterFlag
+        analogData = applyFilter(analogData);
+    end
     
     numTrials = size(analogData,1); %#ok<*NODEF>
     meanData = mean(analogData,2)';
@@ -52,7 +61,7 @@ end
 
 if saveDataFlag
     disp(['Saving ' num2str(length(badTrials)) ' bad trials']);
-    save([folderSegment 'badTrials.mat'],'badTrials','checkTheseElectrodes','threshold','maxLimit');
+    save(fullfile(folderSegment,'badTrials.mat'),'badTrials','checkTheseElectrodes','threshold','maxLimit');
 else
     disp('Bad trials will not be saved..');
 end
@@ -72,6 +81,11 @@ if ~isempty(showElectrodes)
 
         clear signal analogData
         load(fullfile(folderSegment,'LFP',['elec' num2str(channelNum) '.mat']));
+        
+        if applyFilterFlag
+            analogData = applyFilter(analogData);
+        end
+    
         if numTrials<4000
             plot(timeVals,analogData(setdiff(1:numTrials,badTrials),:),'color','k');
             hold on;
@@ -90,4 +104,5 @@ if ~isempty(showElectrodes)
             axis tight;
         end
     end
+end
 end

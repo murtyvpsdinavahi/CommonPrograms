@@ -1,15 +1,16 @@
-function [plotHandle,colorNames,electrodeArray,colorRows,colorCols] = showElectrodeLocationsInColor(gridPosition,plotHandle,holdOnState,hideElectrodeNums,startRow,gridType)
+function [plotHandle,colorNames,electrodeArray,colorRows,colorCols] = showElectrodeLocationsInColor(gridPosition,plotHandle,holdOnState,hideElectrodeNums,startRow,gridType,subjectName)
 
 if ~exist('hideElectrodeNums','var');    hideElectrodeNums=0;           end
 if ~exist('startRow','var');             startRow=5;                    end
 if ~exist('gridType','var');             gridType = 'Microelectrode';   end
+if ~exist('subjectName','var');          subjectName=[];                end
 
 if strcmpi(gridType,'ECoG')
     numRows=8;numCols=10;
 else 
     numRows=10;numCols=10;
 end
-[~,~,electrodeArray] = electrodePositionOnGrid(1,gridType);
+[~,~,electrodeArray] = electrodePositionOnGrid(1,gridType,subjectName);
 
 if ~exist('plotHandle','var') || isempty(plotHandle)
     plotHandle = subplot('Position',gridPosition,'XTickLabel',[],'YTickLabel',[],'box','on');

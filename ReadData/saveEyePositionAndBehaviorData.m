@@ -24,11 +24,11 @@ makeDirectory(folderExtract);
 
 if strncmpi(protocolName,'SRC',3) % SRC
     
-%     [allTrials,goodTrials,stimData,eyeData,eyeRangeMS] = getEyePositionAndBehavioralDataSRC(subjectName,expDate,protocolName,folderSourceString,eyeRangeMS{type},FsEye); 
-%     save(fullfile(folderExtract,'BehaviorData.mat'),'allTrials','goodTrials','stimData');
-%     save(fullfile(folderExtract,'EyeData.mat'),'eyeData','eyeRangeMS');
-%     
-%     saveEyeDataInDegSRC(subjectName,expDate,protocolName,folderSourceString,gridType);
+    [allTrials,goodTrials,stimData,eyeData,eyeRangeMS] = getEyePositionAndBehavioralDataSRC(subjectName,expDate,protocolName,folderSourceString,FsEye); 
+    save(fullfile(folderExtract,'BehaviorData.mat'),'allTrials','goodTrials','stimData');
+    save(fullfile(folderExtract,'EyeData.mat'),'eyeData','eyeRangeMS');
+    
+    saveEyeDataInDegSRC(subjectName,expDate,protocolName,folderSourceString,gridType);
 else
 
     [allTrials,goodTrials,stimData,eyeData,eyeRangeMS] = getEyePositionAndBehavioralDataGRF(subjectName,expDate,protocolName,folderSourceString,FsEye); %#ok<*ASGLU,*NASGU>
@@ -40,16 +40,31 @@ end
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [allTrials,goodTrials,stimData,eyeData,eyeRangeMS] = getEyePositionAndBehavioralDataSRC(subjectName,expDate,protocolName,folderSourceString,eyeRangeMS,Fs) %#ok<*DEFNU>
+function [allTrials,goodTrials,stimData,eyeData,eyeRangeMS] = getEyePositionAndBehavioralDataSRC(subjectName,expDate,protocolName,folderSourceString,Fs) %#ok<*DEFNU>
 
-if ~exist('eyeRangeMS','var');           eyeRangeMS = [-480 800];       end    % ms
 if ~exist('Fs','var');                   Fs = 200;                      end    % Eye position sampled at 200 Hz.
 
-eyeRangePos = eyeRangeMS*Fs/1000;
 datFileName = fullfile(folderSourceString,'data','rawData',[subjectName expDate],[subjectName expDate protocolName '.dat']);
 
 % Get Lablib data
 header = readLLFile('i',datFileName);
+
+if isfield(header,'cueDurationMS')
+    cueDurationMS    = header.cueDurationMS.data;
+    precueDurationMS = header.precueDurationMS.data;
+    precueJitterPC   = header.precueJitterPC.data;
+else
+    cueDurationMS = 0;
+    precueDurationMS = 500;
+    precueJitterPC   = 0;
+end
+minFixationDurationMS = cueDurationMS + round((1-precueJitterPC/100) * precueDurationMS);
+
+minStimDurationMS = round((1-header.stimJitterPC.data/100) * header.stimDurationMS.data);
+minInterstimDurationMS = round((1-header.interstimJitterPC.data/100) * header.interstimMS.data);
+
+eyeRangeMS = [-min(minFixationDurationMS,minInterstimDurationMS)+1000/Fs minStimDurationMS-1000/Fs]; % Around each stimulus onset, data should be available for this range. 2 samples are reduced on each range because sometimes there are minor timing shifts and 2 samples may not be collected.
+eyeRangePos = eyeRangeMS*Fs/1000;
 
 % Stimulus properties
 numTrials = header.numberOfTrials;
@@ -141,7 +156,7 @@ minFixationDurationMS = round((1-header.behaviorSetting.data.fixateJitterPC/100)
 stimDurationMS = header.mapStimDurationMS.data;
 interStimDurationMS = header.mapInterstimDurationMS.data;
 
-eyeRangeMS = [-min(minFixationDurationMS,interStimDurationMS)+1000/Fs stimDurationMS-1000/Fs]; % Around each stimulus onset, data should be available for this range. 1 sample is reduced on each range because sometimes there are minor timing shifts and 1 sample may not be collected.
+eyeRangeMS = [-min(minFixationDurationMS,interStimDurationMS)+1000/Fs stimDurationMS-1000/Fs]; % Around each stimulus onset, data should be available for this range. 2 samples are reduced on each range because sometimes there are minor timing shifts and 2 samples may not be collected.
 eyeRangePos = eyeRangeMS*Fs/1000;
 
 % Stimulus properties
@@ -186,11 +201,16 @@ for i=1:numTrials
             
             % eyeStartTime = trials.eyeXData.timeMS(1);  % This is wrong.
             % The eye data is synchronized with trialStartTime.
-            eyeStartTime = trials.trialStart.timeMS;
+            % eyeStartTime = trials.trialStart.timeMS;
+            
+            % Not any more. Now after trialStart, we sleep for sometime to
+            % send long digital pulses. Now we use the start of eye
+            % calibration as the onset time.
+            eyeStartTime = trials.eyeLeftCalibrationData.timeMS;
             eyeAllTimes = eyeStartTime + (0:(length(eyeX)-1))*(1000/Fs);
             
             stimOnTimes  = [trials.stimulusOnTime.timeMS];
-            numStimuli = allTrials.targetPosAllTrials(trialEndIndex); %=length(stimOnTimes)/3;
+            numStimuli = length(stimOnTimes)/3; % = allTrials.targetPosAllTrials(trialEndIndex); %=length(stimOnTimes)/3;
             
             goodTrials.targetPos(correctIndex) = numStimuli;
             goodTrials.targetTime(correctIndex) = stimOnTimes(end);
@@ -243,11 +263,11 @@ function saveEyeDataInDegSRC(subjectName,expDate,protocolName,folderSourceString
 % The difference between saveEyeDataInDeg and saveEyeDataInDegSRC is that
 % the frontPad stimuli are also saved in SRC.
 
-folderName    = [folderSourceString 'data\' subjectName '\' gridType '\' expDate '\' protocolName '\'];
-folderExtract = [folderName 'extractedData\'];
+folderName    = fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName);
+folderExtract = fullfile(folderName,'extractedData');
 
 clear eyeData 
-load([folderExtract 'EyeData.mat']);
+load(fullfile(folderExtract,'EyeData.mat'));
 
 [eyeDataDegX,eyeDataDegY] = convertEyeDataToDeg(eyeData,1);
 
@@ -257,10 +277,10 @@ for i=1:length(eyeDataDegX)
     eyeSpeedY{i} = [eyeDataDegY{i}(2:lengthEyeSignal)-eyeDataDegY{i}(1:lengthEyeSignal-1);0];
 end
 
-folderSave = [folderName 'segmentedData\eyeData\'];
+folderSave = fullfile(folderName,'segmentedData','eyeData');
 makeDirectory(folderSave);
-save([folderSave 'eyeDataDeg.mat'],'eyeDataDegX','eyeDataDegY');
-save([folderSave 'eyeSpeed.mat'],'eyeSpeedX','eyeSpeedY');
+save(fullfile(folderSave,'eyeDataDeg.mat'),'eyeDataDegX','eyeDataDegY');
+save(fullfile(folderSave,'eyeSpeed.mat'),'eyeSpeedX','eyeSpeedY');
 
 end
 function saveEyeDataInDegGRF(subjectName,expDate,protocolName,folderSourceString,gridType,FsEye)
@@ -314,7 +334,8 @@ header = readLLFile('i',datFileName);
 minFixationDurationMS = round((1-header.behaviorSetting.data.fixateJitterPC/100) * header.behaviorSetting.data.fixateMS);
 stimDurationMS = header.mapStimDurationMS.data;
 interStimDurationMS = header.mapInterstimDurationMS.data;
-maxStimPos = ceil(header.maxTargetTimeMS.data)/(stimDurationMS+interStimDurationMS) +1;
+responseTimeMS = header.responseTimeMS.data;
+maxStimPos = ceil(header.maxTargetTimeMS.data + responseTimeMS)/(stimDurationMS+interStimDurationMS) +1;
 
 durationsMS.minFixationDurationMS = minFixationDurationMS;
 durationsMS.interStimDurationMS = interStimDurationMS;
@@ -344,18 +365,21 @@ for i=1:numTrials
             eX = trial.eyeXData.data';
             eY = trial.eyeYData.data';
             cal=trial.eyeCalibrationData.data.cal;
+            timeStartMS = trial.eyeCalibrationData.timeMS;
         elseif isfield(trial,'eyeRXData')
             eX = trial.eyeRXData.data';
             eY = trial.eyeRYData.data';
             cal=trial.eyeRightCalibrationData.data.cal;
+            timeStartMS = trial.eyeRightCalibrationData.timeMS;
         elseif isfield(trial,'eyeLXData')
             eX = trial.eyeLXData.data';
             eY = trial.eyeLYData.data';
             cal=trial.eyeLeftCalibrationData.data.cal;
+            timeStartMS = trial.eyeLeftCalibrationData.timeMS;
         end
         
         if isCatchTrial
-            numUsefulStim = trial.trial.data.targetIndex+1; % these are the useful stimuli, including target.
+            numUsefulStim = trial.trial.data.numStim; % these are the useful stimuli, including target.
         else
             numUsefulStim = trial.trial.data.targetIndex; % these are the useful stimuli, excluding target.
         end
@@ -365,7 +389,7 @@ for i=1:numTrials
         
         if numUsefulStim>0
             for j=1:numUsefulStim
-                stimOnsetPos = ceil((stimOnTimes(gaborPos(j)) - trial.trialStart.timeMS)/intervalTimeMS);
+                stimOnsetPos = ceil((stimOnTimes(gaborPos(j)) - timeStartMS)/intervalTimeMS);
                 
                 stp = -(minFixationDurationMS + (j-1)*(stimDurationMS+interStimDurationMS))/intervalTimeMS + 1;                  
                 edp = stimDurationMS/intervalTimeMS - 1;

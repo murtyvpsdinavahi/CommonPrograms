@@ -13,9 +13,10 @@
 % 10 March 2015: More information is extracted from LL data file because
 % the digital codes are no longer sufficient for EEG data
 
-% 19 March 2015: Adding endTime (trialEnd).
+% 19 March 2015: Adding endTime (trialEnd) in GRF.
+% 9th October 2015: Adding endTime and trialCertify in SRC.
 
-function LLFileExistsFlag = saveLLData(subjectName,expDate,protocolName,folderSourceString,gridType)
+function LLFileExistsFlag = saveLLData(subjectName,expDate,protocolName,folderSourceString,gridType,frameRate)
 
 datFileName = fullfile(folderSourceString,'data','rawData',[subjectName expDate],[subjectName expDate protocolName '.dat']);
 if ~exist(datFileName,'file')
@@ -29,7 +30,7 @@ else
 %     makeDirectory(folderExtract);
     
     if strncmpi(protocolName,'SRC',3) % SRC
-        [LL,targetInfo,psyInfo,reactInfo] = getStimResultsLLSRC(subjectName,expDate,protocolName,folderSourceString); %#ok<*ASGLU,*NASGU>
+        [LL,targetInfo,psyInfo,reactInfo] = getStimResultsLLSRC(subjectName,expDate,protocolName,folderSourceString,frameRate); %#ok<*ASGLU,*NASGU>
         save(fullfile(folderExtract,'LL.mat'),'LL','targetInfo','psyInfo','reactInfo');
     elseif strncmpi(protocolName,'GAV',3) % GAV (Added by MD 16-03-2015)
         LL = getStimResultsLLGAV(subjectName,gridType,expDate,protocolName,folderSourceString);
@@ -41,9 +42,9 @@ else
 end
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [LL,targetInfo,psyInfo,reactInfo] = getStimResultsLLSRC(subjectName,expDate,protocolName,folderSourceString)
+function [LL,targetInfo,psyInfo,reactInfo] = getStimResultsLLSRC(subjectName,expDate,protocolName,folderSourceString,frameRate)
 
-frameISIinMS=10;
+frameISIinMS=1000/frameRate;
 
 datFileName = fullfile(folderSourceString,'data','rawData',[subjectName expDate],[subjectName expDate protocolName '.dat']);
 
@@ -53,26 +54,59 @@ header = readLLFile('i',datFileName);
 if isfield(header,'eccentricityDeg')
     LL.azimuthDeg   = round(100*header.eccentricityDeg.data*cos(header.polarAngleDeg.data/180*pi))/100;
     LL.elevationDeg = round(100*header.eccentricityDeg.data*sin(header.polarAngleDeg.data/180*pi))/100;
-else
+elseif isfield(header,'azimuthDeg')
     LL.azimuthDeg   = header.azimuthDeg.data;
     LL.elevationDeg = header.elevationDeg.data;
+elseif isfield(header,'azimuth0Deg')
+    LL.azimuth0Deg   = header.azimuth0Deg.data;
+    LL.elevation0Deg = header.elevation0Deg.data;
+    LL.azimuth1Deg   = header.azimuth1Deg.data;
+    LL.elevation1Deg = header.elevation1Deg.data;
 end
 
 LL.sigmaDeg = header.sigmaDeg.data;
-LL.spatialFreqCPD = header.spatialFreqCPD.data;
-LL.orientationDeg = header.stimOrientationDeg.data;
+if isfield(header,'radiusDeg')
+    LL.radiusDeg = header.radiusDeg.data;
+end
 
-% Stimulus properties
+if isfield(header,'spatialFreqCPD')
+    LL.spatialFreqCPD = header.spatialFreqCPD.data;
+elseif isfield(header,'spatialFreq0CPD')
+    LL.spatialFreq0CPD = header.spatialFreq0CPD.data;
+    LL.spatialFreq1CPD = header.spatialFreq1CPD.data;
+end
+
+if isfield(header,'stimOrientationDeg')
+    LL.orientationDeg = header.stimOrientationDeg.data;
+elseif isfield(header,'stimOrientation0Deg')
+    LL.baseOrientation0Deg = header.stimOrientation0Deg.data;
+    LL.baseOrientation1Deg = header.stimOrientation1Deg.data;
+end
+
+% Trial properties
 numTrials = header.numberOfTrials;
 targetContrastIndex = [];
 targetTemporalFreqIndex = [];
-
 catchTrial = [];
 instructTrial = [];
 attendLoc = [];
+eotCode = [];
+startTime = [];
+endTime = [];
+trialCertify = [];
 
-eotCode=[];
-startTime=[];
+% Stimulus Properties
+allStimulusOnTimes = [];
+stimType0 = [];
+stimType1 = [];
+contrastIndex = [];
+temporalFreqIndex = [];
+contrast0PC = [];
+contrast1PC = [];
+orientation0Deg = [];
+orientation1Deg = [];
+temporalFreq0Hz = [];
+temporalFreq1Hz = [];
 
 countTI=1;
 countPI=1;
@@ -83,20 +117,36 @@ for i=1:numTrials
     clear trials
     trials = readLLFile('t',i);
     
-    thisEOT = [trials.trialEnd.data];
-    eotCode = cat(2,eotCode,thisEOT);
-    
     if isfield(trials,'trialStart')
         startTime = cat(2,startTime,[trials.trialStart.timeMS]);
     end
     
-    %     if isfield(trials,'stimulusOn')
-    %         allStimulusIndex = [allStimulusIndex [trials.stimulusOn.data]'];
-    %     end
-    %
-    %     if isfield(trials,'stimulusOnTime')
-    %         allStimulusOnTimes = [allStimulusOnTimes [trials.stimulusOnTime.timeMS]'];
-    %     end
+    if isfield(trials,'trialCertify')
+        trialCertify = [trialCertify [trials.trialCertify.data]];
+    end
+    
+    if isfield(trials,'trialEnd')
+        thisEOT = [trials.trialEnd.data];
+        eotCode = [eotCode thisEOT];
+        endTime = [endTime [trials.trialEnd.timeMS]];
+    end
+    
+    if isfield(trials,'stimulusOn')
+        allStimulusOnTimes = [allStimulusOnTimes [trials.stimulusOn.timeMS]'];
+    end
+    
+    if isfield(trials,'stimDesc')
+        stimType0 = [stimType0 [trials.stimDesc.data.type0]];
+        stimType1 = [stimType1 [trials.stimDesc.data.type1]];
+        contrastIndex = [contrastIndex [trials.stimDesc.data.contrastIndex]];
+        temporalFreqIndex = [temporalFreqIndex [trials.stimDesc.data.temporalFreqIndex]];
+        contrast0PC = [contrast0PC [trials.stimDesc.data.contrast0PC]];
+        contrast1PC = [contrast1PC [trials.stimDesc.data.contrast1PC]];
+        orientation0Deg = [orientation0Deg [trials.stimDesc.data.orientation0Deg]];
+        orientation1Deg = [orientation1Deg [trials.stimDesc.data.orientation1Deg]];
+        temporalFreq0Hz = [temporalFreq0Hz [trials.stimDesc.data.temporalFreq0Hz]];
+        temporalFreq1Hz = [temporalFreq1Hz [trials.stimDesc.data.temporalFreq1Hz]];
+    end
     
     if isfield(trials,'trial')
         thisCatchTrial    = [trials.trial.data.catchTrial];
@@ -112,9 +162,7 @@ for i=1:numTrials
         targetContrastIndex    = cat(2,targetContrastIndex,thisTargetContrastIndex);
         targetTemporalFreqIndex = cat(2,targetTemporalFreqIndex,thisTargetTemporalFreqIndex);
         
-        
         % Adding the getTrialInfoLLFile (from the MAC) details here
-        
         
         % Nothing to update on catch trials or instruction trials
         if (thisCatchTrial) || (thisInstructTrial) %#ok<*BDSCI,BDLGI>
@@ -167,8 +215,22 @@ LL.catchTrial = catchTrial;
 LL.attendLoc = attendLoc;
 LL.targetContrastIndex = targetContrastIndex;
 LL.targetTemporalFreqIndex = targetTemporalFreqIndex;
-
 LL.startTime = startTime/1000; % in seconds
+LL.endTime = endTime/1000; % in seconds
+LL.trialCertify = trialCertify;
+
+% Stimlus Properties
+LL.stimOnTimes = allStimulusOnTimes;
+LL.stimType0 = stimType0;
+LL.stimType1 = stimType1;
+LL.contrastIndex = contrastIndex;
+LL.temporalFreqIndex = temporalFreqIndex;
+LL.contrast0PC = contrast0PC;
+LL.contrast1PC = contrast1PC;
+LL.orientation0Deg = orientation0Deg;
+LL.orientation1Deg = orientation1Deg;
+LL.temporalFreq0Hz = temporalFreq0Hz;
+LL.temporalFreq1Hz = temporalFreq1Hz;
 end
 function LL = getStimResultsLLGRF(subjectName,expDate,protocolName,folderSourceString)
 

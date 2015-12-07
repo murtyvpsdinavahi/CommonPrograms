@@ -1,6 +1,6 @@
 function [snr,meanSpike,N,signal,noise] = getSNR(segmentData)
 
-maxLimit = 100000;
+maxLimit = 10000;
 
 if isempty(segmentData)
     snr = 0;

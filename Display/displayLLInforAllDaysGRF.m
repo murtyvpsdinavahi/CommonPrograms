@@ -145,7 +145,7 @@ plotEyeMeansAndStd(subjectName,expDates,protocolNames,folderSourceString,gridTyp
             histContrast = fileStr(num).contrastPC0;
             displayTargetInfo(gridPositionPerformanceVsTargetPos,gridPositionPercentTargets,gridPositionCorrect,...
             subjectName,expDates{num},protocolNames{num},folderSourceString,gridType,removeBreaks,removeIgnores);
-            [~,fixationData] = getFixationWindowData([folderSourceString 'data\' subjectName '\' gridType '\' expDates{num} '\' protocolNames{num} '\']);
+            [~,fixationData] = getFixationWindowData(fullfile(folderSourceString,'data',subjectName,gridType,expDates{num},protocolNames{num}));
         else
             histContrast = allContrasts;
             displayTargetInfo(gridPositionPerformanceVsTargetPos,gridPositionPercentTargets,gridPositionCorrect,...
@@ -163,21 +163,19 @@ function displayLLbarGRF(subjectName,expDates,protocolNames,folderSourceString,g
 fontSizeLarge=16;
 textPosX = 0.5; textPosY = 1.2;
 
-folderSourceString = appendIfNotPresent(folderSourceString,'\');
-
 if iscell(expDates)
     allEOTCodes=[];
     for i=1:length(expDates)
         clear expDate protocolName
         expDate=expDates{i};
         protocolName=protocolNames{i};
-        load([folderSourceString 'data\' subjectName '\' gridType '\' expDate '\' protocolName '\extractedData\LL.mat']);
+        load(fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName,'extractedData','LL.mat'));
         allEOTCodes = cat(2,allEOTCodes,LL.eotCode);
     end
 else
     expDate=expDates;
     protocolName=protocolNames;
-    load([folderSourceString 'data\' subjectName '\' gridType '\' expDate '\' protocolName '\extractedData\LL.mat']); % Single day
+    load(fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName,'extractedData','LL.mat')); % Single day
     allEOTCodes = [LL.eotCode];
 end
 

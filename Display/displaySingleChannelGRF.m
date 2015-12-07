@@ -1231,6 +1231,7 @@ else
 end
 plot(hcenterRFMapPlot,aziCenter,eleCenter,[plotColor '+']);
 title(hcenterRFMapPlot,['Loc: (' num2str(aziCenter) ',' num2str(eleCenter) '), Size: ' num2str(RFSize)]);
+disp(['Loc: (' num2str(aziCenter) ',' num2str(eleCenter) '), Size: ' num2str(RFSize)]);
 axis(hcenterRFMapPlot,[aValsUnique(1) aValsUnique(end) eValsUnique(1) eValsUnique(end)]);
 
 end
@@ -1314,7 +1315,7 @@ for i=1:length(analogChannelsStored)
 end
 if ~isempty(analogInputNums)
     for i=1:length(analogInputNums)
-        outArray{count} = ['ainp' num2str(analogInputNums(i))]; %#ok<AGROW>
+        outArray{count} = ['ainp' num2str(analogInputNums(i))];
         outString = cat(2,outString,[outArray{count} '|']);
         count=count+1;
     end

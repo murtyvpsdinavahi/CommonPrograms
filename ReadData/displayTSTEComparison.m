@@ -8,46 +8,70 @@ load(fullfile(folderExtract,'digitalEvents.mat'));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % trialStart
-clear xD xL lxD lxL
+clear xD xL
 [~,xD] = getDigitalData(digitalCodeInfo,'TS');
 xL = LL.startTime;
+
+maxDiffTrialStartTimePercent=compareTimes(xD,xL,'Start');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% TrialEnd: Match EOTCodes
+if (sum(getDigitalData(digitalCodeInfo,'TE'))>0) % When the digital codes contain the values
+    xD = getDigitalData(digitalCodeInfo,'TE');
+    xL=LL.eotCode;
+    compareCodes(xD,xL);
+else
+    disp('EOT Codes not available in the digital data, using trialEnd times instead...');
+    [~,xD] = getDigitalData(digitalCodeInfo,'TE');
+    xL = LL.endTime;
+    compareTimes(xD,xL,'End');
+end
+end
+function [value,time] = getDigitalData(digitalCodeInfo,codeName)
+
+for i=1:length(digitalCodeInfo)
+    if strcmp(digitalCodeInfo(i).codeName,codeName)
+        endPos=i;
+        break;
+    end
+end
+
+if ~exist('endPos','var')
+    error(['No trialEvent named ' codeName]);
+else
+    value=digitalCodeInfo(endPos).value;
+    time=digitalCodeInfo(endPos).time;
+end
+
+end
+function maxDiffTimePercent = compareTimes(xD,xL,str)
 
 xD = diff(xD); lxD = length(xD); xD=xD(:);
 xL = diff(xL); lxL = length(xL); xL=xL(:);
 
+if strcmpi(str,'Start')
+    h1 = subplot(221); h2 = subplot(223);
+else
+    h1 = subplot(222); h2 = subplot(224);
+end
+
 if lxD == lxL
-    disp(['Number of startTrials: ' num2str(lxD+1)]);
-    subplot(221)
+    disp(['Number of ' str ' Trials: ' num2str(lxD+1)]);
+    axes(h1);
     plot(xD,'b.'); hold on; plot(xL,'ro'); hold off;
-    ylabel('Difference in Start Times (s)');
+    ylabel(['Difference in ' str ' Times (s)']);
     legend('Dig','LL','Location','SouthEast');
     
-    subplot(223)
+    axes(h2);
     plot(1000*(xD-xL),'b');
     ylabel('Digital-Lablib times (ms)');
     xlabel('Trial Number');
     
-    maxDiffTrialStartTimePercent = 100*max(abs(xD-xL) ./ xD);
+    maxDiffTimePercent = 100*max(abs(xD-xL) ./ xD);
 else
-    error(['Num of startTrials: digital: ' num2str(lxD+1) ' , LL: ' num2str(lxL+1)]);
-%     mlx = min(lxD,lxL);
-%     subplot(231)
-%     plot(xD,'b.'); hold on; plot(xL,'ro'); hold off;
-%     ylabel('Start Times (s)');
-%     legend('Dig','LL','Location','SouthEast');
-%     
-%     subplot(234)
-%     plot(1000*(xD(1:mlx)-xL(1:mlx)),'b');
-%     ylabel('Difference in start times (ms)');
-%     xlabel('Trial Number');
-%     
-%     matchingParameters.maxChangeTrialsPercent = 100*max(abs(xD(1:mlx)-xL(1:mlx)) ./ xD(1:mlx));
+    error(['Num of ' str 'Trials: digital: ' num2str(lxD+1) ' , LL: ' num2str(lxL+1)]);
 end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%% TrialEnd: Match EOTCodes
-xD = getDigitalData(digitalCodeInfo,'TE');
-xL=LL.eotCode;
+end
+function compareCodes(xD,xL)
 
 lxD = length(xD); xD=xD(:);
 lxL = length(xL); xL=xL(:);
@@ -69,34 +93,5 @@ if lxD == lxL
     end
 else
     error(['Number of stimOnset: digital: ' num2str(lxD) ' , LL: ' num2str(lxL)]);
-%     mlx = min(lxD,lxL);
-%     subplot(233)
-%     plot(xD,'b.'); hold on; plot(xL,'ro'); hold off;
-%     ylabel('eotCode number');
-%     axis tight
-%     %legend('Dig','LL','Location','SouthEast');
-%     
-%     subplot(236)
-%     plot(xD(1:mlx)-xL(1:mlx),'b');
-%     ylabel('\Delta eotCode number');
-%     xlabel('Trial Number');
-%     axis ([0 mlx -7 7]);
 end
-end
-function [value,time] = getDigitalData(digitalCodeInfo,codeName)
-
-for i=1:length(digitalCodeInfo)
-    if strcmp(digitalCodeInfo(i).codeName,codeName)
-        endPos=i;
-        break;
-    end
-end
-
-if ~exist('endPos','var')
-    error(['No trialEvent named ' codeName]);
-else
-    value=digitalCodeInfo(endPos).value;
-    time=digitalCodeInfo(endPos).time;
-end
-
 end

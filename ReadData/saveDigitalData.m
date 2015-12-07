@@ -9,10 +9,10 @@ if ~exist('useSingleITC18Flag','var');     useSingleITC18Flag=1;        end
 if useSingleITC18Flag
     % First, find the reward signals
     rewardOnPos = find(rem(digitalEvents,2)==0);
-    rewardOffPos = find(digitalEvents==2^16-1);
+    rewardOffPos = rewardOnPos + 1;
     
-    if length(rewardOnPos)~=length(rewardOffPos)
-        disp('Unequal number of reward on and reward off!!');
+    if max(abs((digitalEvents(rewardOnPos) - digitalEvents(rewardOffPos))+1))>0
+        disp('Reward on and reward off digital codes do not match!!');
     else
         rewardPos = [rewardOnPos(:) ; rewardOffPos(:)];
         disp([num2str(length(rewardOnPos)) ' are reward signals and will be discarded' ]);
@@ -54,7 +54,11 @@ for i=1:numDigitalCodes
     clear codePos
     codePos = find(identifiedDigitalCodes(i) == digitalEvents-32768);
     digitalCodeInfo(i).time = digitalTimeStamps(codePos);
-    digitalCodeInfo(i).value = getValue(digitalEvents(codePos+1),useSingleITC18Flag);
+    if (digitalCodeInfo(i).codeNumber <=256) % simple codes that are not followed by any value
+        digitalCodeInfo(i).value = 0;
+    else
+        digitalCodeInfo(i).value = getValue(digitalEvents(codePos+1),useSingleITC18Flag);
+    end
 end
 
 % Write the digitalCodes
