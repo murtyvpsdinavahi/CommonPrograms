@@ -128,6 +128,11 @@ for i=1:cAnalog
         electrodeNums(electrodeCount) = str2num(analogLabels(i,5:end)); %#ok<*AGROW,*ST2NM>
         electrodeListIDs(electrodeCount,:) = analogList(i);
         
+    elseif strcmp(analogLabels(i,1:4),'chan')
+        electrodeCount = electrodeCount+1;
+        electrodeNums(electrodeCount) = str2num(analogLabels(i,5:end)); %#ok<*AGROW,*ST2NM>
+        electrodeListIDs(electrodeCount,:) = analogList(i);
+        
     elseif strcmp(analogLabels(i,1:4),'ainp')
         ainpCount = ainpCount+1;
         analogInputNums(ainpCount) = str2num(analogLabels(i,5:end));

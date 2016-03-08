@@ -1,4 +1,4 @@
-function [plotHandles,gridPos] = getPlotHandles(numRows,numCols,gridPos,gapX,gapY,removeLabels)
+function [plotHandles,gridPos,plotPos] = getPlotHandles(numRows,numCols,gridPos,gapX,gapY,removeLabels)
 
 if ~exist('numRows','var');           numRows=10;                       end
 if ~exist('numCols','var');           numCols=10;                       end
@@ -16,6 +16,7 @@ for i=1:numRows
     for j=1:numCols
         xPos = gridPos(1)+ (width+gapX)*(j-1);
         plotHandles(i,j) = subplot('position',[xPos yPos width height]);
+        plotPos{i,j} = [xPos yPos width height]; % Added by MD 26-02-2016
     end
 end
 
