@@ -4,7 +4,7 @@
 % The format is similar to the program compareAndDisplayData. This prgoram,
 % however, takes the average of the data between the time timeLims.
 
-function p=compareAndDisplayMeanData(X,xs,hPlot,hSig,testMethod,timeLims,colorX,displayPlot)
+function [p] = compareAndDisplayMeanData(X,xs,hPlot,hSig,testMethod,timeLims,colorX,displayPlot)
 
 defaultMethodForMoreThanTwoEntries   = 'anova';
 

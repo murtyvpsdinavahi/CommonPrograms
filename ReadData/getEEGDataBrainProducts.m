@@ -11,7 +11,7 @@
 % Supratim Ray,
 % March 2015
 
-function electrodesStored = getEEGDataBrainProducts(subjectName,expDate,protocolName,folderSourceString,gridType,...
+function electrodesStored = getEEGDataBrainProducts(subjectName,expDate,protocolName,dataFolder,gridType,...
     goodStimTimes,timeStartFromBaseLine,deltaT,notchLineNoise,reRefFlag,refElec,decimateFlag,decimationFactor)
 
 if ~exist('notchLineNoise','var'); notchLineNoise = 0; end;
@@ -26,12 +26,12 @@ dataLog{1,2} = subjectName;
 dataLog{2,2} = gridType;
 dataLog{3,2} = expDate;
 dataLog{4,2} = protocolName;
-dataLog{14,2} = folderSourceString;
+dataLog{14,2} = dataFolder;
 
 [~,folderName]=getFolderDetails(dataLog);
 
 makeDirectory(folderName);
-folderIn = fullfile(folderSourceString,'data','rawData',[subjectName expDate]);
+folderIn = fullfile(dataFolder,[subjectName expDate]);
 folderExtract = fullfile(folderName,'extractedData');
 makeDirectory(folderExtract);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

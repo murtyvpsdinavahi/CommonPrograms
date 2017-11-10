@@ -14,9 +14,9 @@
 % We assume that the sensor data is being recorded along with the
 % BrainProducts EEG data. 
 
-function getAuxDataLabjack(subjectName,expDate,protocolName,folderSourceString,gridType,goodStimTimes,timeStartFromBaseLine,deltaT,electrodesToStore,reallignFlag)
+function getAuxDataLabjack(subjectName,expDate,protocolName,dataFolder,gridType,goodStimTimes,timeStartFromBaseLine,deltaT,electrodesToStore,reallignFlag)
 
-if ~exist('folderSourceString','var');    folderSourceString ='F:';      end
+if ~exist('folderSourceString','var');    dataFolder ='F:';      end
 if ~exist('timeStartFromBaseLine','var'); timeStartFromBaseLine= -0.55;  end
 if ~exist('deltaT','var');                deltaT = 1.024;                end
 
@@ -25,7 +25,7 @@ dataLog{1,2} = subjectName;
 dataLog{2,2} = gridType;
 dataLog{3,2} = expDate;
 dataLog{4,2} = protocolName;
-dataLog{14,2} = folderSourceString;
+dataLog{14,2} = dataFolder;
 
 [~,folderName]=getFolderDetails(dataLog);
 
@@ -36,7 +36,7 @@ makeDirectory(folderSegment);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Read Labjack Data
-[data,t] = readLabjackData(subjectName,expDate,protocolName,folderSourceString,length(electrodesToStore));
+[data,t] = readLabjackData(subjectName,expDate,protocolName,dataFolder,length(electrodesToStore));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% Compare Reward Times %%%%%%%%%%%%%%%%%%%%%%%%%%%
 % load(fullfile(folderExtract,'LL.mat'),'LL');
@@ -69,9 +69,9 @@ saveAnalogData(data,t,electrodesToStore,folderSegment,goodStimTimesLabjack,timeS
 end
 
 % Read Data from Labjack
-function [analogData,timeVals] = readLabjackData(subjectName,expDate,protocolName,folderSourceString,numChannels)
+function [analogData,timeVals] = readLabjackData(subjectName,expDate,protocolName,dataFolder,numChannels)
 
-folderIn = fullfile(folderSourceString,'data','rawData',[subjectName expDate]);
+folderIn = fullfile(dataFolder,[subjectName expDate]);
 
 timeVals = [];
 for i=1:numChannels

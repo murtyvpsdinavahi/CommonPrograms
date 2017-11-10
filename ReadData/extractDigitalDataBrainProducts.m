@@ -23,7 +23,7 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [digitalTimeStamps,digitalEvents]=extractDigitalDataBrainProducts(subjectName,expDate,protocolName,folderSourceString,gridType,deltaLimitMS)
+function [digitalTimeStamps,digitalEvents]=extractDigitalDataBrainProducts(subjectName,expDate,protocolName,dataFolder,gridType,deltaLimitMS)
 
 % We only consider codes that are separated by at least deltaLimit ms to make sure
 % that none of the codes are during the transition period.
@@ -34,14 +34,14 @@ dataLog{1,2} = subjectName;
 dataLog{2,2} = gridType;
 dataLog{3,2} = expDate;
 dataLog{4,2} = protocolName;
-dataLog{14,2} = folderSourceString;
+dataLog{14,2} = dataFolder;
 
 [~,folderName]=getFolderDetails(dataLog);
 
 fileName = [subjectName expDate protocolName '.vhdr'];
 % folderName = fullfile(folderSourceString,'data',subjectName,gridType,expDate,protocolName);
 makeDirectory(folderName);
-folderIn = fullfile(folderSourceString,'data','rawData',[subjectName expDate]);
+folderIn = fullfile(dataFolder,[subjectName expDate]);
 folderExtract = fullfile(folderName,'extractedData');
 makeDirectory(folderExtract);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
